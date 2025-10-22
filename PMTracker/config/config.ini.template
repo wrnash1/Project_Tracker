@@ -1,0 +1,22 @@
+[Database]
+oracle_host = f1btpap-scan.verizon.com/NARPROD
+oracle_user = splunkveep_nar
+oracle_password =
+sqlite_path =
+
+[Application]
+theme = light
+auto_save = true
+tts_enabled = true
+update_check = true
+update_url = G:/PMTracker/latest_version.txt
+
+[ML]
+delay_model_path = resources/models/delay_predictor.h5
+risk_model_path = resources/models/risk_classifier.h5
+retrain_threshold_days = 90
+
+[Integrations]
+slack_enabled = false
+webex_enabled = false
+google_enabled = false
