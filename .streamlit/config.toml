@@ -1,0 +1,18 @@
+[theme]
+# Verizon Brand Colors
+# Primary: Red (#CD040B / #EE0000)
+# Secondary: Black (#000000)
+# Background: White/Light Gray
+
+primaryColor = "#EE0000"           # Verizon Red
+backgroundColor = "#FFFFFF"         # White
+secondaryBackgroundColor = "#F5F5F5"  # Light Gray
+textColor = "#000000"              # Black
+font = "sans serif"
+
+[server]
+headless = true
+port = 8501
+
+[browser]
+gatherUsageStats = false

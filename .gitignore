@@ -205,3 +205,22 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Verizon Tracker Specific
+# Database files - don't commit user data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Sync directories - transient data
+SYNC_INBOX/
+ARCHIVE/
+AI_Knowledge_Base/
+AI_Feedback/
+
+# Local user databases
+my_projects_*.db
