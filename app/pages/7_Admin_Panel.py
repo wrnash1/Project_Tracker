@@ -28,7 +28,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Tabs for different admin functions
-tab1, tab2, tab3 = st.tabs(["👥 User Management", "⚙️ Configuration", "📊 System Info"])
+tab1, tab2, tab3, tab4 = st.tabs(["👥 User Management", "⚙️ Configuration", "📊 System Info", "💾 Backup & Restore"])
 
 # ===== TAB 1: User Management =====
 with tab1:
@@ -266,3 +266,208 @@ with tab3:
 
         if st.button("📊 View Reports"):
             st.switch_page("pages/8_Reports.py")
+
+# ===== TAB 4: Backup & Restore =====
+with tab4:
+    st.markdown("### 💾 Backup & Restore")
+
+    from src.vtrack.backup import BackupManager
+
+    # Backup statistics
+    stats = BackupManager.get_backup_stats()
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value" style="color: #673AB7;">{stats['total_backups']}</div>
+                <div class="metric-label">Total Backups</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value" style="color: #2196F3;">{stats['total_size_mb']}</div>
+                <div class="metric-label">Size (MB)</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value" style="color: #4CAF50; font-size: 0.9rem;">{stats['most_recent'][:10]}</div>
+                <div class="metric-label">Most Recent</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value" style="color: #FF9800; font-size: 0.9rem;">{stats['oldest'][:10]}</div>
+                <div class="metric-label">Oldest</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Create backup section
+    with st.expander("➕ Create New Backup", expanded=True):
+        with st.form("create_backup_form"):
+            backup_name = st.text_input("Backup Name (optional)", placeholder="e.g., before_major_update")
+            include_local = st.checkbox("Include local databases", value=False,
+                                       help="Include all user local databases in backup")
+
+            col_a, col_b = st.columns([1, 3])
+            with col_a:
+                if st.form_submit_button("🔒 Create Backup", use_container_width=True):
+                    with st.spinner("Creating backup..."):
+                        success, message, path = BackupManager.create_backup(backup_name, include_local)
+
+                        if success:
+                            st.success(message)
+                            st.info(f"Backup location: {path}")
+                            st.rerun()
+                        else:
+                            st.error(message)
+
+    # List existing backups
+    st.markdown("### 📦 Available Backups")
+
+    backups = BackupManager.list_backups()
+
+    if backups:
+        for backup in backups:
+            with st.container():
+                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+
+                with col1:
+                    st.markdown(f"""
+                        <div style="
+                            background: white;
+                            padding: 1rem;
+                            border-radius: 8px;
+                            border-left: 4px solid #2196F3;
+                            margin-bottom: 0.5rem;
+                        ">
+                            <div style="font-weight: 600; color: #333;">
+                                {backup['backup_name']}
+                            </div>
+                            <div style="color: #666; font-size: 0.85rem; margin-top: 0.25rem;">
+                                Created: {backup['created_at']} | Size: {backup['size_mb']} MB
+                            </div>
+                            <div style="color: #999; font-size: 0.75rem; margin-top: 0.25rem;">
+                                Files: {len(backup.get('files_backed_up', []))}
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                with col2:
+                    if st.button("📥 Export", key=f"export_{backup['backup_folder_name']}", use_container_width=True):
+                        zip_data = BackupManager.export_backup(backup['backup_folder_name'])
+                        if zip_data:
+                            st.download_button(
+                                "Download ZIP",
+                                data=zip_data,
+                                file_name=f"{backup['backup_folder_name']}.zip",
+                                mime="application/zip",
+                                key=f"download_{backup['backup_folder_name']}",
+                                use_container_width=True
+                            )
+                        else:
+                            st.error("Export failed")
+
+                with col3:
+                    if st.button("♻️ Restore", key=f"restore_{backup['backup_folder_name']}", use_container_width=True):
+                        st.session_state[f"confirm_restore_{backup['backup_folder_name']}"] = True
+
+                with col4:
+                    if st.button("🗑️ Delete", key=f"delete_{backup['backup_folder_name']}", use_container_width=True, type="secondary"):
+                        st.session_state[f"confirm_delete_{backup['backup_folder_name']}"] = True
+
+                # Confirmation dialogs
+                if st.session_state.get(f"confirm_restore_{backup['backup_folder_name']}", False):
+                    st.warning("⚠️ This will overwrite current databases!")
+                    col_x, col_y = st.columns(2)
+                    with col_x:
+                        if st.button("✅ Confirm Restore", key=f"confirm_restore_yes_{backup['backup_folder_name']}", use_container_width=True):
+                            success, message = BackupManager.restore_backup(backup['backup_folder_name'])
+                            if success:
+                                st.success(message)
+                                del st.session_state[f"confirm_restore_{backup['backup_folder_name']}"]
+                                st.rerun()
+                            else:
+                                st.error(message)
+                    with col_y:
+                        if st.button("❌ Cancel", key=f"confirm_restore_no_{backup['backup_folder_name']}", use_container_width=True):
+                            del st.session_state[f"confirm_restore_{backup['backup_folder_name']}"]
+                            st.rerun()
+
+                if st.session_state.get(f"confirm_delete_{backup['backup_folder_name']}", False):
+                    st.warning("⚠️ This will permanently delete the backup!")
+                    col_x, col_y = st.columns(2)
+                    with col_x:
+                        if st.button("✅ Confirm Delete", key=f"confirm_delete_yes_{backup['backup_folder_name']}", use_container_width=True):
+                            success, message = BackupManager.delete_backup(backup['backup_folder_name'])
+                            if success:
+                                st.success(message)
+                                del st.session_state[f"confirm_delete_{backup['backup_folder_name']}"]
+                                st.rerun()
+                            else:
+                                st.error(message)
+                    with col_y:
+                        if st.button("❌ Cancel", key=f"confirm_delete_no_{backup['backup_folder_name']}", use_container_width=True):
+                            del st.session_state[f"confirm_delete_{backup['backup_folder_name']}"]
+                            st.rerun()
+
+    else:
+        st.info("No backups available. Create your first backup above!")
+
+    # Backup tips
+    st.markdown("---")
+    st.markdown("### 💡 Backup Best Practices")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("""
+            <div class="vz-card">
+                <h4>🔒 Regular Backups</h4>
+                <p style="margin: 0;">Create backups before:</p>
+                <ul style="margin: 0.5rem 0;">
+                    <li>Major updates</li>
+                    <li>Data imports</li>
+                    <li>Configuration changes</li>
+                    <li>User management</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+            <div class="vz-card">
+                <h4>💾 Storage</h4>
+                <p style="margin: 0;">Backup storage tips:</p>
+                <ul style="margin: 0.5rem 0;">
+                    <li>Export to external drive</li>
+                    <li>Keep at least 3 backups</li>
+                    <li>Rotate old backups</li>
+                    <li>Test restore periodically</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+            <div class="vz-card">
+                <h4>⚠️ Caution</h4>
+                <p style="margin: 0;">Important notes:</p>
+                <ul style="margin: 0.5rem 0;">
+                    <li>Restore overwrites current data</li>
+                    <li>Local DBs optional in backup</li>
+                    <li>Export backups off-system</li>
+                    <li>Document backup reasons</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)

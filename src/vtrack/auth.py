@@ -87,6 +87,13 @@ def login(username: str, password: str) -> bool:
         local_db.initialize_schema()
         st.session_state.local_db = local_db
 
+        # Log activity
+        try:
+            from .activity_logger import log_login
+            log_login()
+        except:
+            pass
+
         return True
 
     return False
@@ -94,6 +101,13 @@ def login(username: str, password: str) -> bool:
 
 def logout():
     """Logout the current user and clear session state"""
+    # Log activity before clearing session
+    try:
+        from .activity_logger import log_logout
+        log_logout()
+    except:
+        pass
+
     # Close local database connection if it exists
     if st.session_state.get('local_db'):
         try:

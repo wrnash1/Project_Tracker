@@ -3,6 +3,8 @@ Custom CSS styles for Verizon Tracker
 Modern, clean design with Verizon branding
 """
 
+import streamlit as st
+
 def get_custom_css():
     """Return custom CSS for the application"""
     return """
@@ -350,3 +352,7 @@ def apply_verizon_theme():
     """Apply the Verizon theme to the Streamlit app"""
     import streamlit as st
     st.markdown(get_custom_css(), unsafe_allow_html=True)
+
+    # Apply modern UI enhancements
+    from src.vtrack.modern_ui import inject_modern_css
+    inject_modern_css()

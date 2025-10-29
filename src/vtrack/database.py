@@ -239,6 +239,19 @@ class MasterProjectsDB(Database):
             )
         """)
 
+        # User Activity Log
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS user_activity (
+                activity_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                activity_type TEXT NOT NULL,
+                activity_description TEXT NOT NULL,
+                related_project_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (related_project_id) REFERENCES projects(project_id)
+            )
+        """)
+
         # AI Feedback
         self.execute("""
             CREATE TABLE IF NOT EXISTS ai_feedback (
